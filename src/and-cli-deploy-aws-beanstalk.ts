@@ -147,6 +147,7 @@ CommandRunner.run(async () => {
     // #region Entrypoint
     // -----------------------------------------------------------------------------------------
 
+    program.command("test", "Test command nested 2 levels deep");
     program
         .usage("option")
         .description(deployAwsBeanstalk.description())
@@ -158,7 +159,7 @@ CommandRunner.run(async () => {
         .option("--verbose", "Stream events from AWS")
         .parse(process.argv);
 
-    await deployAwsBeanstalk.run();
+    // await deployAwsBeanstalk.run();
 
     // #endregion Entrypoint
 });

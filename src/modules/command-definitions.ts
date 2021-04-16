@@ -5,6 +5,10 @@ import { CommandDefinitions as BaseCommandDefinitions } from "../interfaces/comm
 // -----------------------------------------------------------------------------------------
 
 const CommandDefinitions: BaseCommandDefinitions = {
+    commands: {
+        command: "commands",
+        description: "List all commands/options",
+    },
     copy: {
         command: "copy",
         description: "Copy files and/or directories",
@@ -15,6 +19,12 @@ const CommandDefinitions: BaseCommandDefinitions = {
             awsBeanstalk: {
                 command: "aws-beanstalk",
                 description: "Run deployments for AWS Beanstalk",
+                children: {
+                    test: {
+                        command: "test",
+                        description: "Testing deeply nested command",
+                    },
+                },
             },
             awsS3: {
                 command: "aws-s3",
@@ -82,6 +92,12 @@ const CommandDefinitions: BaseCommandDefinitions = {
         command: "restore",
         description:
             "Restores application data assets for various application types",
+        children: {
+            azureStorage: {
+                command: "azure-storage",
+                description: "Restore application assets in Azure Storage",
+            },
+        },
     },
     webpack: {
         command: "webpack",

@@ -46,6 +46,10 @@ const File = {
         Echo.success(`File '${file}' successfully deleted`);
     },
 
+    exists(fileExpression: string): boolean {
+        return this.first(fileExpression) != null;
+    },
+
     /**
      * Returns the first match of the provided file expression
      * @param {string} fileExpression
