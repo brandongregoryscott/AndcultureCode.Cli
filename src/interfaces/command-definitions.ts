@@ -10,7 +10,6 @@ import { CommandDefinition } from "./command-definition";
  * to use the non-null assertion operator ! to access the nullable `.commands` property)
  */
 interface CommandDefinitions extends Record<string, CommandDefinition> {
-    commands: CommandDefinition;
     copy: CommandDefinition;
     deploy: CommandDefinition & {
         children: {
@@ -31,6 +30,7 @@ interface CommandDefinitions extends Record<string, CommandDefinition> {
         };
     };
     install: CommandDefinition;
+    ls: CommandDefinition;
     migration: CommandDefinition;
     nuget: CommandDefinition;
     restore: CommandDefinition & {

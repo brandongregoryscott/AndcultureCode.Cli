@@ -5,10 +5,6 @@ import { CommandDefinitions as BaseCommandDefinitions } from "../interfaces/comm
 // -----------------------------------------------------------------------------------------
 
 const CommandDefinitions: BaseCommandDefinitions = {
-    commands: {
-        command: "commands",
-        description: "List all commands/options",
-    },
     copy: {
         command: "copy",
         description: "Copy files and/or directories",
@@ -79,6 +75,10 @@ const CommandDefinitions: BaseCommandDefinitions = {
         command: "install",
         description:
             "Collection of commands related to installation and configuration of the and-cli",
+    },
+    ls: {
+        command: "ls",
+        description: "List all commands/options",
     },
     migration: {
         command: "migration",

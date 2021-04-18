@@ -9,6 +9,7 @@ import os from "os";
 import shell from "shelljs";
 import fs from "fs";
 import { File } from "./file";
+import { ListCommandsOptions } from "../interfaces/list-commands-options";
 
 // -----------------------------------------------------------------------------------------
 // #region Interfaces
@@ -33,6 +34,14 @@ const CACHE_FILENAME = "commands.json";
 const CACHE_PATH = upath.join(os.homedir(), CLI_CONFIG_DIR, CACHE_FILENAME);
 const COMMANDS_START_STRING = "Commands:";
 const COMMANDS_END_STRING = "help [command]";
+const DEFAULT_INDENT = 4;
+const DEFAULT_OPTIONS: ListCommandsOptions = {
+    includeHelp: false,
+    indent: DEFAULT_INDENT,
+    useColor: true,
+    prefix: "- [ ] ",
+    skipCache: false,
+};
 const OPTIONS_START_STRING = "Options:";
 const OPTIONS_END_STRING = Options.Help.toString();
 const PARENT_COMMANDS = CommandDefinitionUtils.getNames();
@@ -44,11 +53,7 @@ const PARENT_COMMANDS = CommandDefinitionUtils.getNames();
 // -----------------------------------------------------------------------------------------
 
 let _cachedStructures: CommandStructure[] = [];
-let _useColor: boolean = true;
-let _prefix: string = "- [ ] ";
-let _includeHelp: boolean = false;
-let _indent: number = 4;
-let _useCache: boolean = true;
+let _options: ListCommandsOptions = {};
 
 // #endregion Variables
 
@@ -56,7 +61,17 @@ let _useCache: boolean = true;
 // #region Public Functions
 // -----------------------------------------------------------------------------------------
 
-const ListCommands = {};
+const ListCommands = {
+    run(options: ListCommandsOptions): void {
+        _setOptions(options);
+
+        _parseOrReadCache();
+        _printStructure(_cachedStructures, 0);
+        if (_options.skipCache == null || !_options.skipCache) {
+            _saveCachedFile();
+        }
+    },
+};
 
 // #endregion Public Functions
 
@@ -110,7 +125,7 @@ const _diffParentCommands = () => {
         return;
     }
 
-    _useCache = false;
+    _options.skipCache = true;
     Echo.message(
         "Detected changes in parent commands that are not yet saved to the cache file - rebuilding."
     );
@@ -135,7 +150,7 @@ const _filterLinesByPattern = (
             (line) => StringUtils.hasValue(line) && !line.includes("\t")
         );
 
-    if (!_includeHelp) {
+    if (!_options.includeHelp) {
         lines = lines.filter(
             (line) =>
                 line !== OPTIONS_END_STRING && line !== COMMANDS_END_STRING
@@ -146,7 +161,7 @@ const _filterLinesByPattern = (
 };
 
 const _echoFormatted = (value: string, indent: number = 0) =>
-    Echo.message(`${" ".repeat(indent)}${_prefix}${value}`, false);
+    Echo.message(`${" ".repeat(indent)}${_options.prefix}${value}`, false);
 
 const _parseChildrenAndOptions = (command: string) => {
     const { stdout } = shell.exec(_buildHelpCommand(command));
@@ -164,7 +179,7 @@ const _parseChildrenAndOptions = (command: string) => {
 const _parseOrReadCache = () => {
     _readCachedFile();
 
-    if (_useCache) {
+    if (_options.skipCache == null || !_options.skipCache) {
         return;
     }
 
@@ -172,13 +187,13 @@ const _parseOrReadCache = () => {
 };
 
 const _readCachedFile = () => {
-    if (!_useCache) {
+    if (_options.skipCache === true) {
         Echo.message("Skipping cache if it exists...");
         return;
     }
 
     if (!File.exists(CACHE_PATH)) {
-        _useCache = false;
+        _setOptions({ skipCache: true });
         Echo.message("No cached file found, building from scratch.");
         return;
     }
@@ -188,7 +203,7 @@ const _readCachedFile = () => {
         const file = fs.readFileSync(CACHE_PATH);
         _cachedStructures = JSON.parse(file.toString());
     } catch (error) {
-        _useCache = false;
+        _setOptions({ skipCache: true });
         Echo.error(
             `There was an error attempting to read or deserialize the file at ${CACHE_PATH} - ${error}`
         );
@@ -204,7 +219,7 @@ const _parseOptions = (stdout: string) =>
 
 const _printStructure = (
     structures: CommandStructure[],
-    indent: number = _indent
+    indent: number = DEFAULT_INDENT
 ) => {
     let parents = structures.filter((structure) => structure.parent == null);
 
@@ -214,7 +229,9 @@ const _printStructure = (
 
     parents.forEach((parent) => {
         _echoFormatted(
-            _useColor ? Formatters.green(parent.command) : parent.command,
+            _options.useColor
+                ? Formatters.green(parent.command)
+                : parent.command,
             indent
         );
 
@@ -222,12 +239,12 @@ const _printStructure = (
             (child: CommandStructure) => child.parent === parent.command
         );
 
-        _printStructure(children, indent + _indent * 2);
+        _printStructure(children, indent + _options.indent! * 2);
 
         parent.options.forEach((option: string) =>
             _echoFormatted(
-                _useColor ? Formatters.yellow(option) : option,
-                indent + _indent
+                _options.useColor ? Formatters.yellow(option) : option,
+                indent + _options.indent!
             )
         );
     });
@@ -247,6 +264,10 @@ const _saveCachedFile = () => {
     }
 
     Echo.success("Cached file successfully updated.");
+};
+
+const _setOptions = (updated: Partial<ListCommandsOptions>) => {
+    _options = { ...DEFAULT_OPTIONS, ..._options, ...updated };
 };
 
 // #endregion Private Functions
