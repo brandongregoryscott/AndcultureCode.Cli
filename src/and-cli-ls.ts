@@ -3,17 +3,13 @@
 import { CommandRunner } from "./modules/command-runner";
 import { CommandDefinitions } from "./modules/command-definitions";
 import program from "commander";
-import { CollectionUtils, StringUtils } from "andculturecode-javascript-core";
+import { CollectionUtils } from "andculturecode-javascript-core";
 import { CommandDefinitionUtils } from "./utilities/command-definition-utils";
 import { Options } from "./constants/options";
 import { Constants } from "./modules/constants";
-import { Echo } from "./modules/echo";
 import upath from "upath";
-import shell from "shelljs";
 import os from "os";
-import fs from "fs";
-import { File } from "./modules/file";
-import { Formatters } from "./modules/formatters";
+import { ListCommands } from "./modules/list-commands";
 
 // -----------------------------------------------------------------------------------------
 // #region Interfaces
@@ -31,16 +27,8 @@ interface CommandStructure {
 // #region Constants
 // -----------------------------------------------------------------------------------------
 
-const { CLI_CONFIG_DIR, DIST, ENTRYPOINT } = Constants;
-const { difference, hasValues, isEmpty } = CollectionUtils;
-const { shortFlag: helpFlag } = Options.Help;
+const { CLI_CONFIG_DIR } = Constants;
 const CACHE_FILENAME = "commands.json";
-const CACHE_PATH = upath.join(os.homedir(), CLI_CONFIG_DIR, CACHE_FILENAME);
-const COMMANDS_START_STRING = "Commands:";
-const COMMANDS_END_STRING = "help [command]";
-const OPTIONS_START_STRING = "Options:";
-const OPTIONS_END_STRING = Options.Help.toString();
-const PARENT_COMMANDS = CommandDefinitionUtils.getNames();
 
 // #endregion Constants
 
@@ -48,7 +36,6 @@ const PARENT_COMMANDS = CommandDefinitionUtils.getNames();
 // #region Variables
 // -----------------------------------------------------------------------------------------
 
-let _cachedStructures: CommandStructure[] = [];
 let _useColor: boolean = true;
 let _prefix: string = "- [ ] ";
 let _includeHelp: boolean = false;
@@ -93,25 +80,13 @@ CommandRunner.run(async () => {
 
     const { color, includeHelp, indent, prefix, skipCache } = program.opts();
 
-    if (color != null) {
-        _useColor = color;
-    }
-
-    if (indent != null) {
-        _indent = Number.parseInt(indent);
-    }
-
-    if (prefix != null) {
-        _prefix = prefix;
-    }
-
-    if (includeHelp != null) {
-        _includeHelp = includeHelp;
-    }
-
-    if (skipCache === true) {
-        _useCache = false;
-    }
+    ListCommands.run({
+        skipCache,
+        includeHelp,
+        indent: Number.parseInt(indent),
+        prefix,
+        useColor: color,
+    });
 
     // parseOrReadCache();
     // printStructure(_cachedStructures, 0);

@@ -62,6 +62,7 @@ let _options: ListCommandsOptions = {};
 // -----------------------------------------------------------------------------------------
 
 const ListCommands = {
+    DEFAULT_OPTIONS,
     run(options: ListCommandsOptions): void {
         _setOptions(options);
 
