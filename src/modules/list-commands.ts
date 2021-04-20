@@ -10,11 +10,15 @@ import shell from "shelljs";
 import fs from "fs";
 import { File } from "./file";
 import { ListCommandsOptions } from "../interfaces/list-commands-options";
+import { CommandDefinitions } from "./command-definitions";
 
 // -----------------------------------------------------------------------------------------
 // #region Interfaces
 // -----------------------------------------------------------------------------------------
 
+/**
+ * DTO for parsing & storing command/option info from commander's output
+ */
 interface CommandStructure {
     command: string;
     options: string[];
@@ -52,8 +56,8 @@ const PARENT_COMMANDS = CommandDefinitionUtils.getNames();
 // #region Variables
 // -----------------------------------------------------------------------------------------
 
-let _cachedStructures: CommandStructure[] = [];
-let _options: ListCommandsOptions = {};
+let _options: ListCommandsOptions = DEFAULT_OPTIONS;
+let _structures: CommandStructure[] = [];
 
 // #endregion Variables
 
@@ -63,14 +67,24 @@ let _options: ListCommandsOptions = {};
 
 const ListCommands = {
     DEFAULT_OPTIONS,
+    cmd(command: string): string {
+        const cliEntrypoint = upath.join(".", DIST, ENTRYPOINT);
+        return `node ${cliEntrypoint} ${command} ${helpFlag}`;
+    },
+    description(): string {
+        return CommandDefinitions.ls.description;
+    },
     run(options: ListCommandsOptions): void {
-        _setOptions(options);
+        this.setOptions(options);
 
         _parseOrReadCache();
-        _printStructure(_cachedStructures, 0);
+        _printStructure(_structures, 0);
         if (_options.skipCache === true) {
             _saveCachedFile();
         }
+    },
+    setOptions(updated: Partial<ListCommandsOptions>) {
+        _options = { ...DEFAULT_OPTIONS, ..._options, ...updated };
     },
 };
 
@@ -90,9 +104,9 @@ const _addOrUpdateStructure = (command: string, options: string[]) => {
 
     const findByCommand = (existing: CommandStructure) =>
         existing.command === command;
-    const existing = _cachedStructures.find(findByCommand);
+    const existing = _structures.find(findByCommand);
     if (existing == null) {
-        _cachedStructures.push({
+        _structures.push({
             command,
             options,
             parent,
@@ -100,21 +114,16 @@ const _addOrUpdateStructure = (command: string, options: string[]) => {
         return;
     }
 
-    _cachedStructures = _cachedStructures.filter(
-        (existing) => !findByCommand(existing)
-    );
-    _cachedStructures.push({
+    _structures = _structures.filter((existing) => !findByCommand(existing));
+    _structures.push({
         ...existing,
         command,
         parent,
     });
 };
 
-const _buildHelpCommand = (command: string) =>
-    `node ${upath.join(".", DIST, ENTRYPOINT)} ${command} ${helpFlag}`;
-
 const _diffParentCommands = () => {
-    const cachedParentCommands = _cachedStructures
+    const cachedParentCommands = _structures
         .filter((structure) => structure.parent == null)
         .map((structure) => structure.command);
 
@@ -126,7 +135,7 @@ const _diffParentCommands = () => {
         return;
     }
 
-    _options.skipCache = true;
+    ListCommands.setOptions({ skipCache: true });
     Echo.message(
         "Detected changes in parent commands that are not yet saved to the cache file - rebuilding."
     );
@@ -165,7 +174,7 @@ const _echoFormatted = (value: string, indent: number = 0) =>
     Echo.message(`${" ".repeat(indent)}${_options.prefix}${value}`, false);
 
 const _parseChildrenAndOptions = (command: string) => {
-    const { stdout } = shell.exec(_buildHelpCommand(command), { silent: true });
+    const { stdout } = shell.exec(ListCommands.cmd(command), { silent: true });
 
     const children = _parseChildren(stdout);
     children.forEach((child: string) => {
@@ -195,7 +204,7 @@ const _readCachedFile = () => {
     }
 
     if (!File.exists(CACHE_PATH)) {
-        _setOptions({ skipCache: true });
+        ListCommands.setOptions({ skipCache: true });
         Echo.message("No cached file found, building from scratch.");
         return;
     }
@@ -203,9 +212,9 @@ const _readCachedFile = () => {
     Echo.message("Found command list cache, attempting to read...");
     try {
         const file = fs.readFileSync(CACHE_PATH);
-        _cachedStructures = JSON.parse(file.toString());
+        _structures = JSON.parse(file.toString());
     } catch (error) {
-        _setOptions({ skipCache: true });
+        ListCommands.setOptions({ skipCache: true });
         Echo.error(
             `There was an error attempting to read or deserialize the file at ${CACHE_PATH} - ${error}`
         );
@@ -237,7 +246,7 @@ const _printStructure = (
             indent
         );
 
-        const children = _cachedStructures.filter(
+        const children = _structures.filter(
             (child: CommandStructure) => child.parent === parent.command
         );
 
@@ -257,19 +266,12 @@ const _saveCachedFile = () => {
     try {
         shell.mkdir("-p", upath.dirname(CACHE_PATH));
         shell.touch(CACHE_PATH);
-        fs.writeFileSync(
-            CACHE_PATH,
-            JSON.stringify(_cachedStructures, undefined, 4)
-        );
+        fs.writeFileSync(CACHE_PATH, JSON.stringify(_structures, undefined, 4));
     } catch (error) {
         Echo.error(`There was an error writing to ${CACHE_PATH} - ${error}`);
     }
 
     Echo.success("Cached file successfully updated.");
-};
-
-const _setOptions = (updated: Partial<ListCommandsOptions>) => {
-    _options = { ...DEFAULT_OPTIONS, ..._options, ...updated };
 };
 
 // #endregion Private Functions
