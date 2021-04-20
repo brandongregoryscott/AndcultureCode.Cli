@@ -35,7 +35,7 @@ const CACHE_PATH = upath.join(os.homedir(), CLI_CONFIG_DIR, CACHE_FILENAME);
 const COMMANDS_START_STRING = "Commands:";
 const COMMANDS_END_STRING = "help [command]";
 const DEFAULT_INDENT = 4;
-const DEFAULT_OPTIONS: ListCommandsOptions = {
+const DEFAULT_OPTIONS: Required<ListCommandsOptions> = {
     includeHelp: false,
     indent: DEFAULT_INDENT,
     useColor: true,
@@ -68,7 +68,7 @@ const ListCommands = {
 
         _parseOrReadCache();
         _printStructure(_cachedStructures, 0);
-        if (_options.skipCache == null || !_options.skipCache) {
+        if (_options.skipCache === true) {
             _saveCachedFile();
         }
     },
@@ -165,7 +165,7 @@ const _echoFormatted = (value: string, indent: number = 0) =>
     Echo.message(`${" ".repeat(indent)}${_options.prefix}${value}`, false);
 
 const _parseChildrenAndOptions = (command: string) => {
-    const { stdout } = shell.exec(_buildHelpCommand(command));
+    const { stdout } = shell.exec(_buildHelpCommand(command), { silent: true });
 
     const children = _parseChildren(stdout);
     children.forEach((child: string) => {
@@ -179,6 +179,7 @@ const _parseChildrenAndOptions = (command: string) => {
 
 const _parseOrReadCache = () => {
     _readCachedFile();
+    _diffParentCommands();
 
     if (_options.skipCache == null || !_options.skipCache) {
         return;

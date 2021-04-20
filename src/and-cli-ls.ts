@@ -3,46 +3,23 @@
 import { CommandRunner } from "./modules/command-runner";
 import { CommandDefinitions } from "./modules/command-definitions";
 import program from "commander";
-import { CollectionUtils } from "andculturecode-javascript-core";
-import { CommandDefinitionUtils } from "./utilities/command-definition-utils";
 import { Options } from "./constants/options";
-import { Constants } from "./modules/constants";
-import upath from "upath";
-import os from "os";
 import { ListCommands } from "./modules/list-commands";
-
-// -----------------------------------------------------------------------------------------
-// #region Interfaces
-// -----------------------------------------------------------------------------------------
-
-interface CommandStructure {
-    command: string;
-    options: string[];
-    parent: string | null;
-}
-
-// #endregion Interfaces
 
 // -----------------------------------------------------------------------------------------
 // #region Constants
 // -----------------------------------------------------------------------------------------
 
-const { CLI_CONFIG_DIR } = Constants;
-const CACHE_FILENAME = "commands.json";
+const { DEFAULT_OPTIONS } = ListCommands;
+const {
+    includeHelp: DEFAULT_INCLUDE_HELP,
+    indent: DEFAULT_INDENT,
+    prefix: DEFAULT_PREFIX,
+    skipCache: DEFAULT_SKIP_CACHE,
+    useColor: DEFAULT_USE_COLOR,
+} = DEFAULT_OPTIONS;
 
 // #endregion Constants
-
-// -----------------------------------------------------------------------------------------
-// #region Variables
-// -----------------------------------------------------------------------------------------
-
-let _useColor: boolean = true;
-let _prefix: string = "- [ ] ";
-let _includeHelp: boolean = false;
-let _indent: number = 4;
-let _useCache: boolean = true;
-
-// #endregion Variables
 
 CommandRunner.run(async () => {
     // -----------------------------------------------------------------------------------------
@@ -50,31 +27,31 @@ CommandRunner.run(async () => {
     // -----------------------------------------------------------------------------------------
 
     program
-        .description(CommandDefinitions.commands.description)
+        .description(CommandDefinitions.ls.description)
         .option(
             "-i, --indent <indent>",
             "Number of spaces to indent each level",
-            _indent.toString()
+            DEFAULT_INDENT.toString()
         )
         .option(
             "--include-help",
             `Include the ${Options.Help} option for each command`,
-            _includeHelp
+            DEFAULT_INCLUDE_HELP
         )
         .option(
             "--no-color",
             "Do not colorize command/options in output",
-            !_useColor
+            !DEFAULT_USE_COLOR
         )
         .option(
             "-p, --prefix <prefix>",
             "Prefix to display before each command/option",
-            _prefix
+            DEFAULT_PREFIX
         )
         .option(
             "--skip-cache",
             "Skip attempting to read cached command list file",
-            false
+            DEFAULT_SKIP_CACHE
         )
         .parse(process.argv);
 
@@ -87,12 +64,6 @@ CommandRunner.run(async () => {
         prefix,
         useColor: color,
     });
-
-    // parseOrReadCache();
-    // printStructure(_cachedStructures, 0);
-    // if (!_useCache) {
-    //     saveCachedFile();
-    // }
 
     // #endregion Entrypoint
 });
