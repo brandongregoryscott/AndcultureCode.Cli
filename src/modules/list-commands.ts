@@ -94,38 +94,41 @@ const ListCommands = {
 // #region Private Functions
 // -----------------------------------------------------------------------------------------
 
-const _addOrUpdateStructure = (command: string, options: string[]) => {
+const _addOrUpdateStructure = (structure: CommandStructure) => {
+    const findByCommand = (existing: CommandStructure) =>
+        existing.command === structure.command;
+    const existing = _structures.find(findByCommand) ?? {};
+    _structures = _structures.filter(
+        (existing: CommandStructure) => !findByCommand(existing)
+    );
+    _structures.push({
+        ...existing,
+        ...structure,
+    });
+};
+
+const _buildStructure = (
+    command: string,
+    options: string[]
+): CommandStructure => {
     const commands = command.split(" ");
-    const hasNestedCommands = command.includes(" ");
+    const hasNestedCommands = commands.length > 1;
     // Remove the last space-separated string if present as it should be the deepest child
-    command = hasNestedCommands ? commands.pop()! : command;
+    const lastCommand = hasNestedCommands ? commands.pop()! : command;
     // If there are nested commands, pop off the closest parent from the end of the string (supports nesting of any depth)
     const parent = hasNestedCommands ? commands.pop()! : null;
 
-    const findByCommand = (existing: CommandStructure) =>
-        existing.command === command;
-    const existing = _structures.find(findByCommand);
-    if (existing == null) {
-        _structures.push({
-            command,
-            options,
-            parent,
-        });
-        return;
-    }
-
-    _structures = _structures.filter((existing) => !findByCommand(existing));
-    _structures.push({
-        ...existing,
-        command,
+    return {
+        command: lastCommand,
+        options,
         parent,
-    });
+    };
 };
 
 const _diffParentCommands = () => {
     const cachedParentCommands = _structures
-        .filter((structure) => structure.parent == null)
-        .map((structure) => structure.command);
+        .filter((structure: CommandStructure) => structure.parent == null)
+        .map((structure: CommandStructure) => structure.command);
 
     const parentCommandsDiffer =
         hasValues(difference(PARENT_COMMANDS, cachedParentCommands)) ||
@@ -135,7 +138,7 @@ const _diffParentCommands = () => {
         return;
     }
 
-    ListCommands.setOptions({ skipCache: true });
+    _resetCache();
     Echo.message(
         "Detected changes in parent commands that are not yet saved to the cache file - rebuilding."
     );
@@ -183,7 +186,8 @@ const _parseChildrenAndOptions = (command: string) => {
     });
 
     const options = _parseOptions(stdout);
-    _addOrUpdateStructure(command, options);
+    const structure = _buildStructure(command, options);
+    _addOrUpdateStructure(structure);
 };
 
 const _parseOrReadCache = () => {
@@ -195,31 +199,6 @@ const _parseOrReadCache = () => {
     }
 
     PARENT_COMMANDS.forEach(_parseChildrenAndOptions);
-};
-
-const _readCachedFile = () => {
-    if (_options.skipCache === true) {
-        Echo.message("Skipping cache if it exists...");
-        return;
-    }
-
-    if (!File.exists(CACHE_PATH)) {
-        ListCommands.setOptions({ skipCache: true });
-        Echo.message("No cached file found, building from scratch.");
-        return;
-    }
-
-    Echo.message("Found command list cache, attempting to read...");
-    try {
-        const file = fs.readFileSync(CACHE_PATH);
-        _structures = JSON.parse(file.toString());
-    } catch (error) {
-        ListCommands.setOptions({ skipCache: true });
-        Echo.error(
-            `There was an error attempting to read or deserialize the file at ${CACHE_PATH} - ${error}`
-        );
-        return;
-    }
 };
 
 const _parseChildren = (stdout: string) =>
@@ -259,6 +238,36 @@ const _printStructure = (
             )
         );
     });
+};
+
+const _readCachedFile = () => {
+    if (_options.skipCache === true) {
+        Echo.message("Skipping cache if it exists...");
+        return;
+    }
+
+    if (!File.exists(CACHE_PATH)) {
+        _resetCache();
+        Echo.message("No cached file found, building from scratch.");
+        return;
+    }
+
+    Echo.message("Found command list cache, attempting to read...");
+    try {
+        const file = fs.readFileSync(CACHE_PATH);
+        _structures = JSON.parse(file.toString());
+    } catch (error) {
+        _resetCache();
+        Echo.error(
+            `There was an error attempting to read or deserialize the file at ${CACHE_PATH} - ${error}`
+        );
+        return;
+    }
+};
+
+const _resetCache = () => {
+    ListCommands.setOptions({ skipCache: true });
+    _structures = [];
 };
 
 const _saveCachedFile = () => {
