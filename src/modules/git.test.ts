@@ -23,6 +23,7 @@ describe("git", () => {
             Git.add(path);
 
             // Assert
+            expect(1).toBe(2);
             expect(shellExecSpy).toHaveBeenCalledWith(expected);
         });
 
