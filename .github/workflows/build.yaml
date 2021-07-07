@@ -18,7 +18,7 @@ jobs:
         # but this doesn't seem to be supported yet https://github.community/t/how-to-set-and-access-a-workflow-variable/17335/6
         steps:
             - uses: voxmedia/github-action-slack-notify-build@v1
-              if: ${{env.SLACK_BOT_TOKEN}} != NULL
+              if: env.SLACK_BOT_TOKEN != NULL
               with:
                   channel: ci
                   color: "#3278BD"
